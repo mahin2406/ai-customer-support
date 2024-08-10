@@ -7,21 +7,22 @@ export default function Home() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello!! I'm the Mahin support assistant. How can I help you today?",
+      content: "Hello!! I'm the Mahin your AI Fitness trainer. How can I help you today?",
     },
   ])
 
   const [message, setMessage] = useState('')
-  const [chatOpen, setChatOpen] = useState(true); // Set to true to show chat by default
   const [isLoading, setIsLoading] = useState(false)
 
   const sendMessage = async () => {
     if (message.trim() === '') return;
+
     setMessages((messages) => [
         ...messages,
         { role: 'user', content: message },
     ]);
     setMessage('');
+    setIsLoading(true);
 
     try {
         console.log("Sending message:", message);
@@ -33,7 +34,6 @@ export default function Home() {
           },
           body: JSON.stringify({ query: message })
       });
-      
 
         console.log("Response status:", response.status);
 
@@ -43,25 +43,31 @@ export default function Home() {
 
         const data = await response.json();
         console.log("Response data:", data);
-        
+
+        // Ensure the response content is properly formatted
+        const formattedContent = data.response
+          .replace(/\n/g, '<br/>') // Convert new lines to HTML <br/>
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Convert **bold** to <strong>
+
         setMessages((messages) => [
             ...messages,
-            { role: 'assistant', content: data.response }
+            { role: 'assistant', content: formattedContent }
         ]);
     } catch (error) {
-
         console.error('Error occurred:', error.message);
         setMessages((messages) => [
             ...messages,
             { role: 'assistant', content: 'Sorry, something went wrong. Please try again later.' }
         ]);
+    } finally {
+        setIsLoading(false);
     }
-};
+  };
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      sendMessage()
+      event.preventDefault();
+      sendMessage();
     }
   }
 
@@ -116,9 +122,9 @@ export default function Home() {
                 color="white"
                 borderRadius={16}
                 p={3}
-              >
-                {message.content}
-              </Box>
+                // Use `dangerouslySetInnerHTML` to render HTML content safely
+                dangerouslySetInnerHTML={{ __html: message.content }}
+              />
             </Box>
           ))}
           <div ref={messagesEndRef} />
