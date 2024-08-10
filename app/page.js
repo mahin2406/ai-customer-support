@@ -12,61 +12,51 @@ export default function Home() {
   ])
 
   const [message, setMessage] = useState('')
+  const [chatOpen, setChatOpen] = useState(true); // Set to true to show chat by default
   const [isLoading, setIsLoading] = useState(false)
 
   const sendMessage = async () => {
-    if (!message.trim() || isLoading) return
-
-    setIsLoading(true)
-
-    const newMessage = { role: 'user', content: message.trim() }
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      newMessage,
-      { role: 'assistant', content: '' },
-    ])
-
-    setMessage('')
+    if (message.trim() === '') return;
+    setMessages((messages) => [
+        ...messages,
+        { role: 'user', content: message },
+    ]);
+    setMessage('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([{ role: 'user', content: message.trim() }]), // Send only the new message
-      })
+        console.log("Sending message:", message);
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ query: message })
+      });
+      
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok')
-      }
+        console.log("Response status:", response.status);
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
+        if (!response.ok) {
+            throw new Error(`Network response was not ok: ${response.statusText}`);
+        }
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const text = decoder.decode(value, { stream: true })
-
-        setMessages((prevMessages) => {
-          const lastMessage = prevMessages[prevMessages.length - 1]
-          return [
-            ...prevMessages.slice(0, -1),
-            { ...lastMessage, content: lastMessage.content + text },
-          ]
-        })
-      }
+        const data = await response.json();
+        console.log("Response data:", data);
+        
+        setMessages((messages) => [
+            ...messages,
+            { role: 'assistant', content: data.response }
+        ]);
     } catch (error) {
-      console.error('Error:', error)
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { role: 'assistant', content: "I'm sorry, but I encountered an error. Please try again later." },
-      ])
-    }
 
-    setIsLoading(false)
-  }
+        console.error('Error occurred:', error.message);
+        setMessages((messages) => [
+            ...messages,
+            { role: 'assistant', content: 'Sorry, something went wrong. Please try again later.' }
+        ]);
+    }
+};
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -139,7 +129,7 @@ export default function Home() {
             fullWidth
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown} // Changed to onKeyDown
+            onKeyDown={handleKeyDown} 
             disabled={isLoading}
           />
           <Button

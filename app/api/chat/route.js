@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { GenerativeModel } from "@google/generative-ai";
+
 
 
 const systemPrompt = `You are a customer support bot for Mahin, a platform where users can buy and sell pre-owned items. Your main role is to assist users with various queries and issues they might encounter related to the platform.
@@ -27,64 +27,79 @@ Language Processing: Use natural language processing to understand and respond t
 Update Knowledge: Regularly update your knowledge base to reflect any changes in Mahin's policies or services.
 By adhering to these guidelines, you will effectively support Mahin users and enhance their overall experience on the platform.`
 
-export async function POST(req, res) {
-  const genAI = new GoogleGenerativeAI(process.env.API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const data = await req.json();
-    
-    const queryGemini = async (text) => {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
+async function queryGemini(text) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: text }],
           },
-          body: JSON.stringify({
-              contents: [
-                  {
-                      parts: [{ text: text }]
-                  }
-              ]
-          }),
-      });
+        ],
+      }),
+    }
+  );
 
-      if (!response.ok) {
-          throw new Error('Failed to fetch data from Gemini API');
-      }
+  if (!response.ok) {
+    throw new Error("Failed to fetch data from Gemini API");
+  }
 
-      const result = await response.json();
-      return result.contents[0].parts[0].text;
-  };
+  const result = await response.json();
 
+  // Log the entire response to ensure we're handling the correct structure
+  console.log("Full response from Gemini API:", JSON.stringify(result, null, 2));
+
+  // Extract the text from the response structure
+  if (
+    result &&
+    result.candidates &&
+    result.candidates[0] &&
+    result.candidates[0].content &&
+    result.candidates[0].content.parts &&
+    result.candidates[0].content.parts[0] &&
+    result.candidates[0].content.parts[0].text
+  ) {
+    return result.candidates[0].content.parts[0].text;
+  } else {
+    throw new Error("Unexpected response structure from Gemini API");
+  }
+}
+
+export async function POST(req) {
   try {
-      const userQuery = data.query;
-      if (!userQuery) {
-          throw new Error("No query provided");
-      }
+    const data = await req.json();
+    const userQuery = data.query;
 
-      const conversationHistory = data.history || []; 
-      conversationHistory.push(`User: ${userQuery}`);
-      const prompt = `${systemPrompt}\n\n${conversationHistory.join('\n')}`;
+    if (!userQuery) {
+      throw new Error("No query provided");
+    }
 
-      let aiResponse = await queryGemini(prompt);
+    const conversationHistory = data.history || [];
+    conversationHistory.push(`User: ${userQuery}`);
 
-      aiResponse = aiResponse.split('\n')[0].trim();
-      conversationHistory.push(`AI: ${aiResponse}`);
-      // Limiting the coversation 
-      const shouldEndConversation = conversationHistory.length >= 6;
-      if (shouldEndConversation) {
-          aiResponse += `\nGoodbye! The conversation has been recorded and forwarded to a Mahin`;
-      }
+    const prompt = `${systemPrompt}\n\n${conversationHistory.join("\n")}`;
+    let aiResponse = await queryGemini(prompt);
 
-      return new Response(JSON.stringify({ response: aiResponse, history: conversationHistory }), {
-          headers: { 'Content-Type': 'application/json' },
-      });
+    aiResponse = aiResponse.split("\n")[0].trim();
+    conversationHistory.push(`AI: ${aiResponse}`);
 
+    // Optional: Limit the conversation length and end it after a certain number of exchanges
+    const shouldEndConversation = conversationHistory.length >= 6;
+    if (shouldEndConversation) {
+      aiResponse += `\nGoodbye! The conversation has been recorded.`;
+    }
+
+    return NextResponse.json({
+      response: aiResponse,
+      history: conversationHistory,
+    });
   } catch (error) {
-      console.error('Error occurred:', error.message);
-      return new Response(JSON.stringify({ response: 'Sorry, something went wrong. Please try again later.' }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 500,
-      });
+    console.error("Error occurred:", error.message);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
