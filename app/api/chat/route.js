@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { GenerativeModel } from "@google/generative-ai";
+
 
 const systemPrompt = `You are a customer support bot for Mahin, a platform where users can buy and sell pre-owned items. Your main role is to assist users with various queries and issues they might encounter related to the platform.
 
@@ -26,36 +27,64 @@ Language Processing: Use natural language processing to understand and respond t
 Update Knowledge: Regularly update your knowledge base to reflect any changes in Mahin's policies or services.
 By adhering to these guidelines, you will effectively support Mahin users and enhance their overall experience on the platform.`
 
-export async function POST(req) {
-    const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-    });
-    const data = await req.json() 
+export async function POST(req, res) {
+  const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const data = await req.json();
     
-    const completion = await openai.chat.completions.create({
-      messages: [{role: 'system', content: systemPrompt}, ...data], 
-      model: 'text-embedding-3-small', 
-      stream: true, 
-    })
-  
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder() 
-        try {
-          for await (const chunk of completion) {
-            const content = chunk.choices[0]?.delta?.content 
-            if (content) {
-              const text = encoder.encode(content) 
-              controller.enqueue(text) 
-            }
-          }
-        } catch (err) {
-          controller.error(err) 
-        } finally {
-          controller.close() 
-        }
-      },
-    })
-  
-    return new NextResponse(stream) // Return the stream as the response
+    const queryGemini = async (text) => {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+              contents: [
+                  {
+                      parts: [{ text: text }]
+                  }
+              ]
+          }),
+      });
+
+      if (!response.ok) {
+          throw new Error('Failed to fetch data from Gemini API');
+      }
+
+      const result = await response.json();
+      return result.contents[0].parts[0].text;
+  };
+
+  try {
+      const userQuery = data.query;
+      if (!userQuery) {
+          throw new Error("No query provided");
+      }
+
+      const conversationHistory = data.history || []; 
+      conversationHistory.push(`User: ${userQuery}`);
+      const prompt = `${systemPrompt}\n\n${conversationHistory.join('\n')}`;
+
+      let aiResponse = await queryGemini(prompt);
+
+      aiResponse = aiResponse.split('\n')[0].trim();
+      conversationHistory.push(`AI: ${aiResponse}`);
+      // Limiting the coversation 
+      const shouldEndConversation = conversationHistory.length >= 6;
+      if (shouldEndConversation) {
+          aiResponse += `\nGoodbye! The conversation has been recorded and forwarded to a Mahin`;
+      }
+
+      return new Response(JSON.stringify({ response: aiResponse, history: conversationHistory }), {
+          headers: { 'Content-Type': 'application/json' },
+      });
+
+  } catch (error) {
+      console.error('Error occurred:', error.message);
+      return new Response(JSON.stringify({ response: 'Sorry, something went wrong. Please try again later.' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+      });
   }
+}
