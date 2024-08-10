@@ -1,8 +1,7 @@
 'use client'
-import * as React from 'react';
+
 import { Box, Button, Stack, TextField, useMediaQuery } from '@mui/material'
 import { useState, useRef, useEffect } from 'react'
-
 
 export default function Home() {
   const [messages, setMessages] = useState([
@@ -47,9 +46,10 @@ export default function Home() {
         const data = await response.json();
         console.log("Response data:", data);
 
+        // Ensure the response content is properly formatted
         const formattedContent = data.response
-          .replace(/\n/g, '<br/>') 
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+          .replace(/\n/g, '<br/>') // Convert new lines to HTML <br/>
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Convert **bold** to <strong>
 
         setMessages((messages) => [
             ...messages,
@@ -91,15 +91,40 @@ export default function Home() {
       flexDirection="column"
       justifyContent="center"
       alignItems="center"
-      p={2} 
+      p={2}
+      sx={{
+        // Background
+        backgroundImage: 'url("/gym.jpg")', // Replace with your background image path
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat',
+        position: 'relative', 
+        overflow: 'hidden',
+      }}
     >
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(255, 255, 255, 0.3)', 
+          zIndex: -1, 
+        }}
+      />
       <Stack
         direction={'column'}
         width={isSmallScreen ? "90vw" : "500px"}
         height={isSmallScreen ? "90vh" : "700px"}
-        border="1px solid black"
+        border="2px solid #555" 
         p={2}
         spacing={3}
+        sx={{
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+          borderRadius: '16px',
+        }}
       >
         <Stack
           direction={'column'}
@@ -112,22 +137,38 @@ export default function Home() {
             <Box
               key={index}
               display="flex"
+              alignItems="center"
               justifyContent={
                 message.role === 'assistant' ? 'flex-start' : 'flex-end'
               }
+              sx={{ marginBottom: 1 }}
             >
+              {message.role === 'assistant' && (
+                <img
+                  src="/bot-icon.jpg" 
+                  alt="Bot"
+                  style={{ width: 40, height: 40, borderRadius: '50%', marginRight: 8 }}
+                />
+              )}
               <Box
                 bgcolor={
                   message.role === 'assistant'
-                    ? 'primary.main'
+                    ? 'primary.main' // Blue color for assistant messages
                     : 'secondary.main'
                 }
                 color="white"
-                borderRadius={10}
+                borderRadius={8} 
                 p={2}
                 maxWidth="80%" 
                 dangerouslySetInnerHTML={{ __html: message.content }}
               />
+              {message.role === 'user' && (
+                <img
+                  src="/user-icon.jpg" // Path to the user icon image
+                  alt="User"
+                  style={{ width: 40, height: 40, borderRadius: '50%', marginLeft: 8 }}
+                />
+              )}
             </Box>
           ))}
           <div ref={messagesEndRef} />
@@ -140,6 +181,25 @@ export default function Home() {
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'white', 
+                },
+                '&:hover fieldset': {
+                  borderColor: 'white', 
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'white', 
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'white', 
+              },
+              '& .MuiInputBase-input': {
+                color: 'white', 
+              },
+            }}
           />
           <Button
             variant="contained"
