@@ -1,18 +1,20 @@
 'use client'
 
-import { Box, Button, Stack, TextField } from '@mui/material'
+import { Box, Button, Stack, TextField, useMediaQuery } from '@mui/material'
 import { useState, useRef, useEffect } from 'react'
 
 export default function Home() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello!! I'm the Mahin your AI Fitness trainer. How can I help you today?",
+      content: "Hello!! I'm the Mahin support assistant. How can I help you today?",
     },
   ])
 
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  const isSmallScreen = useMediaQuery((theme) => theme.breakpoints.down('sm'));
 
   const sendMessage = async () => {
     if (message.trim() === '') return;
@@ -89,11 +91,12 @@ export default function Home() {
       flexDirection="column"
       justifyContent="center"
       alignItems="center"
+      p={2} // Add padding for small screens
     >
       <Stack
         direction={'column'}
-        width="500px"
-        height="700px"
+        width={isSmallScreen ? "90vw" : "500px"}
+        height={isSmallScreen ? "90vh" : "700px"}
         border="1px solid black"
         p={2}
         spacing={3}
@@ -121,7 +124,8 @@ export default function Home() {
                 }
                 color="white"
                 borderRadius={16}
-                p={3}
+                p={2}
+                maxWidth="80%" // Adjust max width for responsiveness
                 // Use `dangerouslySetInnerHTML` to render HTML content safely
                 dangerouslySetInnerHTML={{ __html: message.content }}
               />
@@ -129,13 +133,13 @@ export default function Home() {
           ))}
           <div ref={messagesEndRef} />
         </Stack>
-        <Stack direction={'row'} spacing={2}>
+        <Stack direction={'row'} spacing={2} mt={2}>
           <TextField
             label="Message"
             fullWidth
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown} 
+            onKeyDown={handleKeyDown}
             disabled={isLoading}
           />
           <Button
