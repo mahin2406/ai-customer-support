@@ -1,7 +1,8 @@
 'use client'
-
+import * as React from 'react';
 import { Box, Button, Stack, TextField, useMediaQuery } from '@mui/material'
 import { useState, useRef, useEffect } from 'react'
+
 
 export default function Home() {
   const [messages, setMessages] = useState([
@@ -14,7 +15,7 @@ export default function Home() {
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const isSmallScreen = useMediaQuery((theme) => theme.breakpoints.down('sm'));
+  const isSmallScreen = useMediaQuery('(max-width:600px)');
 
   const sendMessage = async () => {
     if (message.trim() === '') return;
@@ -46,10 +47,9 @@ export default function Home() {
         const data = await response.json();
         console.log("Response data:", data);
 
-        // Ensure the response content is properly formatted
         const formattedContent = data.response
-          .replace(/\n/g, '<br/>') // Convert new lines to HTML <br/>
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Convert **bold** to <strong>
+          .replace(/\n/g, '<br/>') 
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
 
         setMessages((messages) => [
             ...messages,
@@ -91,7 +91,7 @@ export default function Home() {
       flexDirection="column"
       justifyContent="center"
       alignItems="center"
-      p={2} // Add padding for small screens
+      p={2} 
     >
       <Stack
         direction={'column'}
@@ -123,10 +123,9 @@ export default function Home() {
                     : 'secondary.main'
                 }
                 color="white"
-                borderRadius={16}
+                borderRadius={10}
                 p={2}
-                maxWidth="80%" // Adjust max width for responsiveness
-                // Use `dangerouslySetInnerHTML` to render HTML content safely
+                maxWidth="80%" 
                 dangerouslySetInnerHTML={{ __html: message.content }}
               />
             </Box>
