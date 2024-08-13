@@ -7,7 +7,7 @@ export default function Home() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello!! 😊 I'm the Mahin an AI fitness trainer 💪. How can I help you today?",
+      content: "Hello!! 😊 I'm Mahin an AI fitness trainer 💪. How can I help you today?",
     },
   ])
 
